@@ -42,8 +42,8 @@ defmodule Signal.Alpaca.StreamHandler do
 
     should_process? =
       is_nil(last_quote) or
-      quote.bid_price != last_quote.bid_price or
-      quote.ask_price != last_quote.ask_price
+        quote.bid_price != last_quote.bid_price or
+        quote.ask_price != last_quote.ask_price
 
     if should_process? do
       # Update BarCache
@@ -59,9 +59,11 @@ defmodule Signal.Alpaca.StreamHandler do
       # Update state with new quote for deduplication
       new_last_quotes = Map.put(last_quotes, symbol_atom, quote)
       new_counters = increment_counter(state, :quotes)
-      new_state = state
-                  |> Map.put(:last_quotes, new_last_quotes)
-                  |> Map.put(:counters, new_counters)
+
+      new_state =
+        state
+        |> Map.put(:last_quotes, new_last_quotes)
+        |> Map.put(:counters, new_counters)
 
       # Check if we should log stats
       maybe_log_stats(new_state)
@@ -115,7 +117,9 @@ defmodule Signal.Alpaca.StreamHandler do
 
     # Log trading halts
     if status.status_code != "T" do
-      Logger.warning("[StreamHandler] Trading status change for #{symbol}: #{status.status_message}")
+      Logger.warning(
+        "[StreamHandler] Trading status change for #{symbol}: #{status.status_message}"
+      )
     end
 
     # Broadcast to PubSub
@@ -189,9 +193,10 @@ defmodule Signal.Alpaca.StreamHandler do
       """)
 
       # Reset counters and update last_log
-      new_state = state
-                  |> Map.put(:counters, %{quotes: 0, bars: 0, trades: 0, statuses: 0})
-                  |> Map.put(:last_log, now)
+      new_state =
+        state
+        |> Map.put(:counters, %{quotes: 0, bars: 0, trades: 0, statuses: 0})
+        |> Map.put(:last_log, now)
 
       {:ok, new_state}
     else

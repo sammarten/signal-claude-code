@@ -72,7 +72,9 @@ defmodule Signal.Alpaca.SubscriptionManager do
       statuses: symbol_strings
     }
 
-    Logger.info("[SubscriptionManager] Subscribing to #{length(symbol_strings)} symbols: #{inspect(symbols)}")
+    Logger.info(
+      "[SubscriptionManager] Subscribing to #{length(symbol_strings)} symbols: #{inspect(symbols)}"
+    )
 
     try do
       AlpacaEx.Stream.subscribe(Signal.Alpaca.Stream, subscriptions)

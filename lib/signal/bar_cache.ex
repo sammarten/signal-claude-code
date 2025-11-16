@@ -82,7 +82,8 @@ defmodule Signal.BarCache do
   @spec current_price(atom()) :: Decimal.t() | nil
   def current_price(symbol) when is_atom(symbol) do
     case get(symbol) do
-      {:ok, %{last_quote: %{bid_price: bid, ask_price: ask}}} when not is_nil(bid) and not is_nil(ask) ->
+      {:ok, %{last_quote: %{bid_price: bid, ask_price: ask}}}
+      when not is_nil(bid) and not is_nil(ask) ->
         # Calculate mid-point: (bid + ask) / 2
         Decimal.add(bid, ask)
         |> Decimal.div(Decimal.new(2))
@@ -113,12 +114,14 @@ defmodule Signal.BarCache do
     default_data = %{last_bar: nil, last_quote: nil}
 
     # Try to read existing data, construct new data, and insert atomically
-    new_data = case :ets.lookup(@table_name, symbol) do
-      [{^symbol, existing_data}] ->
-        Map.put(existing_data, :last_bar, bar)
-      [] ->
-        %{default_data | last_bar: bar}
-    end
+    new_data =
+      case :ets.lookup(@table_name, symbol) do
+        [{^symbol, existing_data}] ->
+          Map.put(existing_data, :last_bar, bar)
+
+        [] ->
+          %{default_data | last_bar: bar}
+      end
 
     :ets.insert(@table_name, {symbol, new_data})
     :ok
@@ -142,12 +145,14 @@ defmodule Signal.BarCache do
     default_data = %{last_bar: nil, last_quote: nil}
 
     # Try to read existing data, construct new data, and insert atomically
-    new_data = case :ets.lookup(@table_name, symbol) do
-      [{^symbol, existing_data}] ->
-        Map.put(existing_data, :last_quote, quote)
-      [] ->
-        %{default_data | last_quote: quote}
-    end
+    new_data =
+      case :ets.lookup(@table_name, symbol) do
+        [{^symbol, existing_data}] ->
+          Map.put(existing_data, :last_quote, quote)
+
+        [] ->
+          %{default_data | last_quote: quote}
+      end
 
     :ets.insert(@table_name, {symbol, new_data})
     :ok
@@ -168,13 +173,14 @@ defmodule Signal.BarCache do
 
   @impl true
   def init(_opts) do
-    table = :ets.new(@table_name, [
-      :named_table,
-      :public,
-      :set,
-      read_concurrency: true,
-      write_concurrency: false
-    ])
+    table =
+      :ets.new(@table_name, [
+        :named_table,
+        :public,
+        :set,
+        read_concurrency: true,
+        write_concurrency: false
+      ])
 
     Logger.info("[BarCache] Initialized ETS table: #{@table_name}")
 

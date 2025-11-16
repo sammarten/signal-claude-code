@@ -13,9 +13,6 @@ defmodule Signal.Repo.Migrations.CreateEvents do
     # Unique constraint on (stream_id, version) for optimistic locking
     create unique_index(:events, [:stream_id, :version])
 
-    # Index for efficient querying by stream
-    create index(:events, [:stream_id, :version])
-
     # Index for querying by event type
     create index(:events, [:event_type])
 

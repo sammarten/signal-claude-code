@@ -38,10 +38,15 @@ defmodule Signal.Repo.Migrations.CreateMarketBars do
     """)
 
     # Create index for efficient queries (symbol, bar_time DESC)
-    create index(:market_bars, [:symbol, :bar_time], order: [bar_time: :desc])
+    execute("""
+    CREATE INDEX market_bars_symbol_bar_time_index ON market_bars (symbol, bar_time DESC);
+    """)
   end
 
   def down do
+    # Drop the index
+    execute("DROP INDEX IF EXISTS market_bars_symbol_bar_time_index;")
+
     # Drop the table (this will also remove hypertable, compression, and retention policies)
     drop table(:market_bars)
   end
