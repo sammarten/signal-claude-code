@@ -35,3 +35,7 @@ signal-*.tar
 npm-debug.log
 /assets/node_modules/
 
+# Environment variables with API keys and secrets
+.env
+.env.local
+

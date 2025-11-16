@@ -12,8 +12,10 @@ defmodule Signal.Application do
       Signal.Repo,
       {DNSCluster, query: Application.get_env(:signal, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Signal.PubSub},
-      # Start a worker by calling: Signal.Worker.start_link(arg)
-      # {Signal.Worker, arg},
+      # BarCache for fast in-memory access to latest market data
+      Signal.BarCache,
+      # Alpaca WebSocket stream (only starts if credentials configured)
+      Signal.Alpaca.StreamSupervisor,
       # Start to serve requests, typically the last entry
       SignalWeb.Endpoint
     ]
