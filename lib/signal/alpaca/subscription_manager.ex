@@ -97,9 +97,7 @@ defmodule Signal.Alpaca.SubscriptionManager do
         schedule_subscription()
 
       kind, error ->
-        Logger.error(
-          "[SubscriptionManager] Failed to subscribe (#{kind}): #{inspect(error)}"
-        )
+        Logger.error("[SubscriptionManager] Failed to subscribe (#{kind}): #{inspect(error)}")
 
         # Retry after delay
         schedule_subscription()
