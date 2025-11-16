@@ -87,3 +87,37 @@ config :phoenix_live_view,
 
 # Disable swoosh api client as it is only required for production adapters.
 config :swoosh, :api_client, false
+
+# Configure AlpacaEx library
+config :alpaca_ex,
+  api_key: System.get_env("ALPACA_API_KEY"),
+  api_secret: System.get_env("ALPACA_API_SECRET"),
+  base_url: System.get_env("ALPACA_BASE_URL") || "https://paper-api.alpaca.markets",
+  ws_url: System.get_env("ALPACA_WS_URL") || "wss://stream.data.alpaca.markets/v2/iex"
+
+# Configure Signal app
+config :signal,
+  symbols: [
+    # Tech stocks
+    :AAPL,
+    :TSLA,
+    :NVDA,
+    :PLTR,
+    :GOOGL,
+    :MSFT,
+    :AMZN,
+    :META,
+    :AMD,
+    :NFLX,
+    :CRM,
+    :ADBE,
+    # Index ETFs
+    :SPY,
+    :QQQ,
+    :SMH,
+    :DIA,
+    :IWM
+  ],
+  market_open: ~T[09:30:00],
+  market_close: ~T[16:00:00],
+  timezone: "America/New_York"
