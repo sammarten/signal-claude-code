@@ -19,7 +19,7 @@ defmodule Signal.Alpaca.StreamSupervisor do
   @impl true
   def init(_opts) do
     unless alpaca_configured?() do
-      Logger.warning("""
+      Logger.info("""
       [StreamSupervisor] Alpaca credentials not configured.
       Set ALPACA_API_KEY and ALPACA_API_SECRET environment variables to enable streaming.
       Running without real-time market data.

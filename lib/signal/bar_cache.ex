@@ -169,6 +169,28 @@ defmodule Signal.BarCache do
     |> Enum.map(fn {symbol, _data} -> symbol end)
   end
 
+  @doc """
+  Deletes a symbol from the cache.
+
+  Useful for cleanup or testing.
+  """
+  @spec delete(atom()) :: :ok
+  def delete(symbol) when is_atom(symbol) do
+    :ets.delete(@table_name, symbol)
+    :ok
+  end
+
+  @doc """
+  Clears all data from the cache.
+
+  Primarily for testing purposes.
+  """
+  @spec clear() :: :ok
+  def clear do
+    :ets.delete_all_objects(@table_name)
+    :ok
+  end
+
   ## Server Callbacks
 
   @impl true

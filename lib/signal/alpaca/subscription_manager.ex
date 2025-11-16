@@ -51,9 +51,16 @@ defmodule Signal.Alpaca.SubscriptionManager do
       subscribe_to_symbols(state.symbols)
       {:noreply, %{state | subscribed: true}}
     else
-      Logger.warning("[SubscriptionManager] No symbols configured for subscription")
+      Logger.info("[SubscriptionManager] No symbols configured for subscription")
       {:noreply, state}
     end
+  end
+
+  @impl true
+  def handle_info(msg, state) do
+    # Catch-all for unknown messages
+    Logger.debug("[SubscriptionManager] Received unknown message: #{inspect(msg)}")
+    {:noreply, state}
   end
 
   ## Private Helpers
@@ -79,9 +86,21 @@ defmodule Signal.Alpaca.SubscriptionManager do
     try do
       AlpacaEx.Stream.subscribe(Signal.Alpaca.Stream, subscriptions)
       Logger.info("[SubscriptionManager] Successfully subscribed to all symbols")
-    rescue
-      error ->
-        Logger.error("[SubscriptionManager] Failed to subscribe: #{inspect(error)}")
+    catch
+      :exit, {:noproc, _} ->
+        # Stream process not available (expected in test/dev without Alpaca configured)
+        Logger.debug(
+          "[SubscriptionManager] Stream not available, will retry when connection is established"
+        )
+
+        # Retry after delay
+        schedule_subscription()
+
+      kind, error ->
+        Logger.error(
+          "[SubscriptionManager] Failed to subscribe (#{kind}): #{inspect(error)}"
+        )
+
         # Retry after delay
         schedule_subscription()
     end
