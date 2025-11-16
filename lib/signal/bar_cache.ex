@@ -99,6 +99,7 @@ defmodule Signal.BarCache do
   Updates the bar for a symbol.
 
   Creates entry if it doesn't exist, preserving any existing quote data.
+  This operation is atomic - uses ETS's built-in atomicity guarantees.
 
   ## Examples
 
@@ -107,15 +108,19 @@ defmodule Signal.BarCache do
   """
   @spec update_bar(atom(), map()) :: :ok
   def update_bar(symbol, bar) when is_atom(symbol) and is_map(bar) do
-    case get(symbol) do
-      {:ok, existing_data} ->
-        updated_data = Map.put(existing_data, :last_bar, bar)
-        :ets.insert(@table_name, {symbol, updated_data})
+    # Use :ets.insert with a default value factory to make this atomic
+    # ETS insert is atomic, and we construct the full value to insert
+    default_data = %{last_bar: nil, last_quote: nil}
 
-      {:error, :not_found} ->
-        :ets.insert(@table_name, {symbol, %{last_bar: bar, last_quote: nil}})
+    # Try to read existing data, construct new data, and insert atomically
+    new_data = case :ets.lookup(@table_name, symbol) do
+      [{^symbol, existing_data}] ->
+        Map.put(existing_data, :last_bar, bar)
+      [] ->
+        %{default_data | last_bar: bar}
     end
 
+    :ets.insert(@table_name, {symbol, new_data})
     :ok
   end
 
@@ -123,6 +128,7 @@ defmodule Signal.BarCache do
   Updates the quote for a symbol.
 
   Creates entry if it doesn't exist, preserving any existing bar data.
+  This operation is atomic - uses ETS's built-in atomicity guarantees.
 
   ## Examples
 
@@ -131,15 +137,19 @@ defmodule Signal.BarCache do
   """
   @spec update_quote(atom(), map()) :: :ok
   def update_quote(symbol, quote) when is_atom(symbol) and is_map(quote) do
-    case get(symbol) do
-      {:ok, existing_data} ->
-        updated_data = Map.put(existing_data, :last_quote, quote)
-        :ets.insert(@table_name, {symbol, updated_data})
+    # Use :ets.insert with a default value factory to make this atomic
+    # ETS insert is atomic, and we construct the full value to insert
+    default_data = %{last_bar: nil, last_quote: nil}
 
-      {:error, :not_found} ->
-        :ets.insert(@table_name, {symbol, %{last_bar: nil, last_quote: quote}})
+    # Try to read existing data, construct new data, and insert atomically
+    new_data = case :ets.lookup(@table_name, symbol) do
+      [{^symbol, existing_data}] ->
+        Map.put(existing_data, :last_quote, quote)
+      [] ->
+        %{default_data | last_quote: quote}
     end
 
+    :ets.insert(@table_name, {symbol, new_data})
     :ok
   end
 

@@ -1,9 +1,9 @@
 defmodule Signal.Alpaca.StreamSupervisor do
   @moduledoc """
-  Supervisor for the Alpaca WebSocket stream.
+  Supervisor for the Alpaca WebSocket stream and subscription manager.
 
-  Starts the AlpacaEx.Stream process with Signal's StreamHandler callback.
-  Subscribes to configured symbols for real-time market data.
+  Starts the AlpacaEx.Stream process with Signal's StreamHandler callback
+  and the SubscriptionManager that handles symbol subscriptions.
 
   Only starts if Alpaca credentials are configured, allowing the application
   to run in environments without API access (testing, development without keys).
@@ -18,7 +18,6 @@ defmodule Signal.Alpaca.StreamSupervisor do
 
   @impl true
   def init(_opts) do
-    # Check if Alpaca is configured
     unless alpaca_configured?() do
       Logger.warning("""
       [StreamSupervisor] Alpaca credentials not configured.
@@ -31,56 +30,19 @@ defmodule Signal.Alpaca.StreamSupervisor do
     else
       Logger.info("[StreamSupervisor] Starting Alpaca WebSocket stream...")
 
-      # Get configured symbols
-      symbols = get_configured_symbols()
-
-      # Build child spec for AlpacaEx.Stream
+      # Start both the stream and the subscription manager
       children = [
+        # The WebSocket stream connection
         {AlpacaEx.Stream,
          callback_module: Signal.Alpaca.StreamHandler,
          callback_state: Signal.Alpaca.StreamHandler.init_state(),
-         name: Signal.Alpaca.Stream}
+         name: Signal.Alpaca.Stream},
+        # The subscription manager (subscribes after connection is established)
+        Signal.Alpaca.SubscriptionManager
       ]
 
-      # Start supervisor with stream process
-      {:ok, pid} = Supervisor.init(children, strategy: :one_for_one)
-
-      # Subscribe to symbols after a short delay to allow connection
-      Process.send_after(self(), :subscribe_symbols, 2000)
-
-      # Store symbols in process state for later use
-      Process.put(:symbols, symbols)
-
-      {:ok, pid}
+      Supervisor.init(children, strategy: :one_for_one)
     end
-  end
-
-  @impl true
-  def handle_info(:subscribe_symbols, state) do
-    symbols = Process.get(:symbols, [])
-
-    if symbols != [] do
-      # Convert atom symbols to strings for AlpacaEx
-      symbol_strings = Enum.map(symbols, &Atom.to_string/1)
-
-      # Subscribe to bars and quotes for all symbols
-      subscriptions = %{
-        bars: symbol_strings,
-        quotes: symbol_strings,
-        statuses: symbol_strings
-      }
-
-      Logger.info("[StreamSupervisor] Subscribing to #{length(symbol_strings)} symbols: #{inspect(symbols)}")
-
-      try do
-        AlpacaEx.Stream.subscribe(Signal.Alpaca.Stream, subscriptions)
-      rescue
-        error ->
-          Logger.error("[StreamSupervisor] Failed to subscribe: #{inspect(error)}")
-      end
-    end
-
-    {:noreply, state}
   end
 
   ## Private Helpers
@@ -91,10 +53,5 @@ defmodule Signal.Alpaca.StreamSupervisor do
       AlpacaEx.Config.configured?()
   rescue
     _ -> false
-  end
-
-  defp get_configured_symbols do
-    # Get symbols from application config, default to empty list
-    Application.get_env(:signal, :symbols, [])
   end
 end

@@ -13,6 +13,9 @@ defmodule Signal.Alpaca.StreamHandler do
 
   @behaviour AlpacaEx.Stream.Callback
 
+  # Configuration
+  @log_interval_seconds 60
+
   @doc """
   Handles incoming messages from the Alpaca WebSocket stream.
 
@@ -31,7 +34,7 @@ defmodule Signal.Alpaca.StreamHandler do
 
   # Handle quote messages
   def handle_message(%{type: :quote, symbol: symbol} = quote, state) do
-    symbol_atom = String.to_atom(symbol)
+    symbol_atom = safe_symbol_to_atom(symbol)
 
     # Check for deduplication
     last_quotes = Map.get(state, :last_quotes, %{})
@@ -69,7 +72,7 @@ defmodule Signal.Alpaca.StreamHandler do
 
   # Handle bar messages
   def handle_message(%{type: :bar, symbol: symbol} = bar, state) do
-    symbol_atom = String.to_atom(symbol)
+    symbol_atom = safe_symbol_to_atom(symbol)
 
     # Update BarCache
     Signal.BarCache.update_bar(symbol_atom, bar)
@@ -90,7 +93,7 @@ defmodule Signal.Alpaca.StreamHandler do
 
   # Handle trade messages
   def handle_message(%{type: :trade, symbol: symbol} = trade, state) do
-    symbol_atom = String.to_atom(symbol)
+    symbol_atom = safe_symbol_to_atom(symbol)
 
     # Broadcast to PubSub (no caching needed for individual trades)
     Phoenix.PubSub.broadcast(
@@ -108,7 +111,7 @@ defmodule Signal.Alpaca.StreamHandler do
 
   # Handle status messages (trading halts, etc.)
   def handle_message(%{type: :status, symbol: symbol} = status, state) do
-    symbol_atom = String.to_atom(symbol)
+    symbol_atom = safe_symbol_to_atom(symbol)
 
     # Log trading halts
     if status.status_code != "T" do
@@ -151,6 +154,18 @@ defmodule Signal.Alpaca.StreamHandler do
 
   ## Private Helpers
 
+  @doc false
+  defp safe_symbol_to_atom(symbol) when is_binary(symbol) do
+    # Use String.to_existing_atom/1 to prevent atom table exhaustion
+    # This will raise ArgumentError if the symbol isn't already an atom,
+    # which is desired behavior - we only accept configured symbols
+    String.to_existing_atom(symbol)
+  rescue
+    ArgumentError ->
+      Logger.warning("[StreamHandler] Received data for unconfigured symbol: #{symbol}")
+      reraise ArgumentError, __STACKTRACE__
+  end
+
   defp increment_counter(state, counter_type) do
     counters = Map.get(state, :counters, %{quotes: 0, bars: 0, trades: 0, statuses: 0})
     current_count = Map.get(counters, counter_type, 0)
@@ -162,7 +177,7 @@ defmodule Signal.Alpaca.StreamHandler do
     now = DateTime.utc_now()
     seconds_since_log = DateTime.diff(now, last_log, :second)
 
-    if seconds_since_log >= 60 do
+    if seconds_since_log >= @log_interval_seconds do
       counters = Map.get(state, :counters, %{quotes: 0, bars: 0, trades: 0, statuses: 0})
 
       Logger.info("""
